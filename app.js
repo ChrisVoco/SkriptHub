@@ -1,29 +1,154 @@
-// Kausta nimi, kus hoiad kõiki oma skripte:
 const SKRIPTIDE_KAUST = "skriptid/";
-
-// SIIA LISA OMA PROJEKTID (kirjuta ainult faili nimi, kaust lisatakse automaatselt):
-const projektid = [
-    {
-        nimi: "Guessr OP SKRIPT!",
-        kategooria: "JavaScript",
-        kirjeldus: "Täisfunktsionaalne abiskript, mis töötab nii OpenGuessr kui ka GeoGuessr keskkonnas.",
-        fail: "guessr.js",
-        patched: false
-    }
-];
+let projektid = [];
 
 const listContainer = document.getElementById('script-list');
 const searchInput = document.getElementById('search-input');
+const adminToggle = document.getElementById('admin-toggle');
+const adminPanel = document.getElementById('admin-panel');
+const postBtn = document.getElementById('post-script-btn');
 
-document.getElementById('total-count').textContent = projektid.length;
-document.getElementById('working-count').textContent = projektid.filter(p => !p.patched).length;
+let adminParool = sessionStorage.getItem('adminParool') || null;
+
+// Kontrollib parooli serveri kaudu
+async function kontrolliParooli(parool) {
+    try {
+        const res = await fetch("api.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                parool: parool,
+                tegevus: "kontrolli"
+            })
+        });
+        return res.ok;
+    } catch {
+        return false;
+    }
+}
+
+// Laeb projektid serverist (api.php)
+async function laeProjektid() {
+    try {
+        const res = await fetch("api.php?v=" + Date.now(), { cache: "no-store" });
+        const andmed = await res.json();
+        if (res.ok && Array.isArray(andmed)) {
+            projektid = andmed;
+        } else {
+            alert(andmed.error || "Viga projektide laadimisel!");
+        }
+    } catch {
+        alert("Ei saanud serveriga (api.php) ühendust!");
+    }
+    uuendaStatistikat();
+    renderProjects(searchInput.value);
+}
+
+function uuendaStatistikat() {
+    document.getElementById('total-count').textContent = projektid.length;
+    document.getElementById('working-count').textContent = projektid.filter(p => !p.patched).length;
+}
+
+function uuendaAdminVaadet() {
+    if (adminParool) {
+        adminToggle.textContent = "🔓";
+        adminPanel.style.display = "block";
+    } else {
+        adminToggle.textContent = "🔒";
+        adminPanel.style.display = "none";
+    }
+    renderProjects(searchInput.value);
+}
+
+// Admin sisselogimine / väljalogimine
+adminToggle.addEventListener('click', async () => {
+    if (adminParool) {
+        adminParool = null;
+        sessionStorage.removeItem('adminParool');
+        uuendaAdminVaadet();
+        return;
+    }
+
+    const sisestatud = prompt("Sisesta admin parool:");
+    if (!sisestatud) return;
+
+    adminToggle.textContent = "⏳";
+    const onOige = await kontrolliParooli(sisestatud);
+
+    if (onOige) {
+        adminParool = sisestatud;
+        sessionStorage.setItem('adminParool', sisestatud);
+        uuendaAdminVaadet();
+    } else {
+        adminToggle.textContent = "🔒";
+        alert("Vale parool! Ligipääs keelatud.");
+    }
+});
+
+// Uue skripti postitamine
+postBtn.addEventListener('click', async () => {
+    const nimi = document.getElementById('new-name').value.trim();
+    const kategooria = document.getElementById('new-cat').value.trim() || "JavaScript";
+    const fail = document.getElementById('new-file').value.trim();
+    const kirjeldus = document.getElementById('new-desc').value.trim();
+    const kood = document.getElementById('new-code').value;
+
+    if (!nimi || !fail || !kood) {
+        alert("Täida vähemalt skripti nimi, faili nimi ja koodi kast!");
+        return;
+    }
+
+    const btnSpan = postBtn.querySelector('span');
+    btnSpan.textContent = "Salvestan serverisse...";
+
+    try {
+        const res = await fetch("api.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                parool: adminParool,
+                tegevus: "lisa",
+                nimi,
+                kategooria,
+                fail,
+                kirjeldus,
+                kood
+            })
+        });
+
+        const vastus = await res.json();
+        if (!res.ok) {
+            alert(vastus.error || "Salvestamine ebaõnnestus!");
+            if (res.status === 403) {
+                adminParool = null;
+                sessionStorage.removeItem('adminParool');
+                uuendaAdminVaadet();
+            }
+            btnSpan.textContent = "Postita skript lehele";
+            return;
+        }
+
+        document.getElementById('new-name').value = "";
+        document.getElementById('new-cat').value = "";
+        document.getElementById('new-file').value = "";
+        document.getElementById('new-desc').value = "";
+        document.getElementById('new-code').value = "";
+
+        projektid = vastus.projektid;
+        uuendaStatistikat();
+        renderProjects(searchInput.value);
+        btnSpan.textContent = "Postita skript lehele";
+    } catch {
+        alert("Serveriga ei saanud ühendust!");
+        btnSpan.textContent = "Postita skript lehele";
+    }
+});
 
 function renderProjects(filterText = "") {
     listContainer.innerHTML = "";
     const query = filterText.toLowerCase();
 
-    const filtered = projektid.filter(p => 
-        p.nimi.toLowerCase().includes(query) || 
+    const filtered = projektid.filter(p =>
+        p.nimi.toLowerCase().includes(query) ||
         p.kirjeldus.toLowerCase().includes(query) ||
         (p.kategooria && p.kategooria.toLowerCase().includes(query))
     );
@@ -69,6 +194,14 @@ function renderProjects(filterText = "") {
                     <button class="btn preview-btn">
                         <span>Vaata koodi</span>
                     </button>
+                    ${adminParool ? `
+                        <button class="btn preview-btn toggle-status-btn">
+                            <span>${projekt.patched ? '✅ Märgi töötavaks' : '🛑 Märgi patched'}</span>
+                        </button>
+                        <button class="btn preview-btn delete-btn" style="color: #f87171;">
+                            <span>🗑️ Kustuta</span>
+                        </button>
+                    ` : ''}
                 </div>
             </div>
             <div class="code-drawer">
@@ -85,6 +218,55 @@ function renderProjects(filterText = "") {
         const previewBtn = card.querySelector('.preview-btn');
         const drawer = card.querySelector('.code-drawer');
         const preBlock = drawer.querySelector('pre');
+        const toggleStatusBtn = card.querySelector('.toggle-status-btn');
+        const deleteBtn = card.querySelector('.delete-btn');
+
+        if (toggleStatusBtn) {
+            toggleStatusBtn.addEventListener('click', async () => {
+                toggleStatusBtn.querySelector('span').textContent = "Salvestan...";
+                const res = await fetch("api.php", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        parool: adminParool,
+                        tegevus: "staatus",
+                        fail: projekt.fail,
+                        patched: !projekt.patched
+                    })
+                });
+                const vastus = await res.json();
+                if (res.ok) {
+                    projektid = vastus.projektid;
+                    uuendaStatistikat();
+                    renderProjects(searchInput.value);
+                } else {
+                    alert(vastus.error || "Viga!");
+                }
+            });
+        }
+
+        if (deleteBtn) {
+            deleteBtn.addEventListener('click', async () => {
+                if (!confirm(`Kas oled kindel, et soovid skripti "${projekt.nimi}" kustutada?`)) return;
+                const res = await fetch("api.php", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        parool: adminParool,
+                        tegevus: "kustuta",
+                        fail: projekt.fail
+                    })
+                });
+                const vastus = await res.json();
+                if (res.ok) {
+                    projektid = vastus.projektid;
+                    uuendaStatistikat();
+                    renderProjects(searchInput.value);
+                } else {
+                    alert(vastus.error || "Viga kustutamisel!");
+                }
+            });
+        }
 
         try {
             const vastus = await fetch(failiTee + "?v=" + Date.now(), { cache: "no-store" });
@@ -130,7 +312,7 @@ function renderProjects(filterText = "") {
                 }, 2000);
             } catch {
                 copyBtnText.textContent = "Viga!";
-                alert("Ei suutnud faili kopeerida. Kontrolli, kas fail asub skriptid/ kaustas.");
+                alert("Ei suutnud faili kopeerida.");
             }
         });
 
@@ -142,4 +324,18 @@ function renderProjects(filterText = "") {
 }
 
 searchInput.addEventListener('input', (e) => renderProjects(e.target.value));
-renderProjects();
+
+// Kui lehte värskendatakse ja sessioonis on parool, kontrollib igaks juhuks üle
+(async () => {
+    if (adminParool) {
+        const kehtib = await kontrolliParooli(adminParool);
+        if (kehtib) {
+            adminToggle.textContent = "🔓";
+            adminPanel.style.display = "block";
+        } else {
+            adminParool = null;
+            sessionStorage.removeItem('adminParool');
+        }
+    }
+    laeProjektid();
+})();

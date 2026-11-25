@@ -32,10 +32,26 @@
             </div>
         </div>
 
+        <!-- ADMIN PANEEL (avaneb alles pärast õige parooli kinnitamist serveris) -->
+        <div class="admin-panel" id="admin-panel" style="display: none;">
+            <h3>➕ Lisa või uuenda skripti</h3>
+            <div class="admin-grid">
+                <input type="text" id="new-name" placeholder="Skripti nimi (nt Roblox Fly v2)">
+                <input type="text" id="new-cat" placeholder="Keel / Kategooria (nt Lua, JavaScript)">
+                <input type="text" id="new-file" placeholder="Faili nimi (nt fly-v2.lua)">
+                <input type="text" id="new-desc" placeholder="Lühike kirjeldus">
+            </div>
+            <textarea id="new-code" rows="6" placeholder="Kleebi siia terve skripti kood..."></textarea>
+            <button class="btn copy-btn" id="post-script-btn" style="width: 100%; margin-top: 10px;">
+                <span>Postita skript lehele</span>
+            </button>
+        </div>
+
         <div class="container" id="script-list"></div>
 
         <footer>
             Kõik failid legit • Sigma Kirk
+            <span id="admin-toggle" title="Admin režiim" style="cursor:pointer; margin-left:8px; opacity:0.6;">🔒</span>
         </footer>
     </div>
 
