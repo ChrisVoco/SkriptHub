@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="et">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Koodipank // Script Hub</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="wrapper">
+        <header>
+            <div class="badge-top">⚡ PRIVAATNE KOODIPANK</div>
+            <h1>Minu Skriptid & Projektid</h1>
+            <p class="subtitle">Vali allolevast nimekirjast sobiv skript ja kopeeri see ühe klikiga oma lõikelauale.</p>
+        </header>
+
+        <div class="toolbar">
+            <div class="search-box">
+                <svg class="search-icon" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                    <circle cx="11" cy="11" r="8"></circle>
+                    <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                </svg>
+                <input type="text" id="search-input" placeholder="Otsi skripti nime või kirjelduse järgi...">
+            </div>
+            <div class="stats-pill" id="stats-pill">
+                <span>Kokku: <strong id="total-count">0</strong></span>
+                <span>•</span>
+                <span>Töötab: <strong id="working-count" class="text-green">0</strong></span>
+            </div>
+        </div>
+
+        <div class="container" id="script-list"></div>
+
+        <footer>
+            Kõik failid legit • Sigma Kirk
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
